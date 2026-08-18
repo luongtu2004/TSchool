@@ -50,17 +50,20 @@ export default function HomePage({ onStartExam }: HomePageProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 hidden sm:inline">{user?.name}</span>
-            <Link
-              href="/admin"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                bg-violet-600/20 text-violet-300 border border-violet-500/30
-                hover:bg-violet-600/40 hover:text-white transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Thêm câu
-            </Link>
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                  bg-violet-600/20 text-violet-300 border border-violet-500/30
+                  hover:bg-violet-600/40 hover:text-white transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Quản trị
+              </Link>
+            )}
             <button
               onClick={logout}
               title="Đăng xuất"
@@ -83,19 +86,22 @@ export default function HomePage({ onStartExam }: HomePageProps) {
               Xin chào, <span className="text-indigo-400 font-medium">{user?.name}</span>!
             </p>
           </div>
-          <Link
-            href="/admin"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white
-              bg-gradient-to-r from-violet-600 to-indigo-600
-              hover:from-violet-500 hover:to-indigo-500
-              shadow-lg shadow-violet-500/25 transition-all active:scale-[0.98]
-              self-start sm:self-auto flex-shrink-0"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Tạo đề / Thêm câu
-          </Link>
+          {user?.role === "admin" && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white
+                bg-gradient-to-r from-violet-600 to-indigo-600
+                hover:from-violet-500 hover:to-indigo-500
+                shadow-lg shadow-violet-500/25 transition-all active:scale-[0.98]
+                self-start sm:self-auto flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Trang quản trị
+            </Link>
+          )}
         </div>
 
         {/* Exam grid */}
@@ -193,33 +199,25 @@ export default function HomePage({ onStartExam }: HomePageProps) {
           </div>
         )}
 
-        {/* Mobile FAB – two actions */}
-        <div className="sm:hidden fixed bottom-6 right-6 z-40 flex flex-col gap-2 items-end">
-          <Link
-            href="/admin?tab=create-exam"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl
-              bg-[#1a1040] border border-violet-500/40 text-violet-300
-              text-sm font-semibold shadow-xl active:scale-95 transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-            Tạo đề
-          </Link>
-          <Link
-            href="/admin"
-            className="flex items-center gap-2 px-4 py-3 rounded-2xl
-              bg-gradient-to-r from-violet-600 to-indigo-600
-              text-white text-sm font-bold
-              shadow-2xl shadow-violet-500/40
-              active:scale-95 transition-all"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Thêm câu
-          </Link>
-        </div>
+        {/* Mobile FAB – Quản trị (Chỉ hiện cho admin) */}
+        {user?.role === "admin" && (
+          <div className="sm:hidden fixed bottom-6 right-6 z-40">
+            <Link
+              href="/admin"
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl
+                bg-gradient-to-r from-violet-600 to-indigo-600
+                text-white text-sm font-bold
+                shadow-2xl shadow-violet-500/40
+                active:scale-95 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Quản trị
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
