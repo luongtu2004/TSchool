@@ -100,6 +100,7 @@ export default function AuthPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
 
@@ -152,17 +153,28 @@ export default function AuthPage() {
   async function handleRegister(e: FormEvent) {
     e.preventDefault();
     setServerError("");
+    setSuccessMessage("");
     if (!validateRegister()) return;
     setIsSubmitting(true);
     const res = await register(regName, regEmail, regPw);
     setIsSubmitting(false);
-    if (!res.success) setServerError(res.error ?? "Đã xảy ra lỗi.");
+    if (!res.success) {
+      setServerError(res.error ?? "Đã xảy ra lỗi.");
+    } else if (res.pending) {
+      setSuccessMessage("Đăng ký thành công! Vui lòng đợi quản trị viên phê duyệt tài khoản để đăng nhập.");
+      setRegName("");
+      setRegEmail("");
+      setRegPw("");
+      setRegConfirmPw("");
+      setTab("login");
+    }
   }
 
   // ── Tab switch reset ─────────────────────────────────────────────────────────
   function switchTab(t: "login" | "register") {
     setTab(t);
     setServerError("");
+    setSuccessMessage("");
     setLoginErrors({ email: "", password: "" });
     setRegErrors({ name: "", email: "", password: "", confirm: "" });
   }
@@ -221,6 +233,16 @@ export default function AuthPage() {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               {serverError}
+            </div>
+          )}
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="mb-5 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm flex items-center gap-2">
+              <svg className="w-5 h-5 flex-shrink-0 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              </svg>
+              {successMessage}
             </div>
           )}
 

@@ -1,19 +1,20 @@
 /**
  * QuizPage.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Main quiz interface component. Features:
- *  - Async question loading with skeleton loader
+ * Main quiz interface – redesigned with Kahoot/Wayground style:
+ *  - Dark purple header with question text (centered)
+ *  - Optional image between question and answers
+ *  - 4 large colorful answer tiles in a 2×2 grid
  *  - Sticky header with countdown timer + progress bar
- *  - Question navigator grid (click to jump)
- *  - Smooth answer selection with Tailwind transitions
- *  - Floating "Nộp bài" button
- *  - Passes answers up to parent via onSubmit()
+ *  - Sidebar question navigator
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
 import { Question, OptionKey, fetchQuestions } from "@/lib/quizData";
 import { useAuth } from "@/contexts/AuthContext";
 import ConfirmModal from "./ConfirmModal";
@@ -23,10 +24,13 @@ export type UserAnswers = Record<number, OptionKey>;
 
 interface QuizPageProps {
   onSubmit: (answers: UserAnswers, questions: Question[], timeUsed: number) => void;
+  examId?: number;
+  examName?: string;
+  onBackHome?: () => void;
 }
 
 // ─── Timer hook ───────────────────────────────────────────────────────────────
-const QUIZ_DURATION_SEC = 45 * 60; // 45 minutes
+const QUIZ_DURATION_SEC = 45 * 60;
 
 function useCountdown(initialSec: number, onExpire: () => void) {
   const [remaining, setRemaining] = useState(initialSec);
@@ -45,28 +49,143 @@ function useCountdown(initialSec: number, onExpire: () => void) {
   return { remaining, elapsed, formatted: `${mm}:${ss}` };
 }
 
+// ─── Option colors (Kahoot-style: blue, red, yellow, green) ──────────────────
+const OPTION_STYLES: Record<OptionKey, { bg: string; hoverBg: string; selectedBg: string; label: string }> = {
+  A: {
+    bg: "bg-[#1368ce]",
+    hoverBg: "hover:bg-[#1a7ae0]",
+    selectedBg: "bg-[#0d52a8]",
+    label: "A",
+  },
+  B: {
+    bg: "bg-[#d89e00]",
+    hoverBg: "hover:bg-[#e8ab00]",
+    selectedBg: "bg-[#b88500]",
+    label: "B",
+  },
+  C: {
+    bg: "bg-[#d13b3b]",
+    hoverBg: "hover:bg-[#e04444]",
+    selectedBg: "bg-[#b03030]",
+    label: "C",
+  },
+  D: {
+    bg: "bg-[#238c23]",
+    hoverBg: "hover:bg-[#2aa52a]",
+    selectedBg: "bg-[#1a7a1a]",
+    label: "D",
+  },
+};
+
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
-    <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 animate-pulse space-y-4">
-      <div className="flex gap-3 items-start">
-        <div className="w-8 h-8 rounded-lg bg-white/10 flex-shrink-0" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 bg-white/10 rounded w-full" />
-          <div className="h-4 bg-white/10 rounded w-3/4" />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+    <div className="rounded-2xl overflow-hidden animate-pulse">
+      <div className="bg-[#2d2060] h-32 rounded-t-2xl" />
+      <div className="grid grid-cols-2 gap-2 p-2 bg-[#1a1040]">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="h-12 bg-white/5 rounded-xl" />
+          <div key={i} className="h-20 rounded-xl bg-white/10" />
         ))}
       </div>
     </div>
   );
 }
 
+// ─── Single Question Card (Kahoot style) ─────────────────────────────────────
+interface QuestionCardProps {
+  q: Question;
+  idx: number;
+  selected: OptionKey | undefined;
+  isActive: boolean;
+  onSelect: (key: OptionKey) => void;
+  cardRef: (el: HTMLDivElement | null) => void;
+}
+
+function QuestionCard({ q, idx, selected, isActive, onSelect, cardRef }: QuestionCardProps) {
+  return (
+    <div
+      ref={cardRef}
+      id={`question-${q.id}`}
+      className={`rounded-2xl overflow-hidden border-2 transition-all duration-300 scroll-mt-24 ${
+        isActive
+          ? "border-violet-400/60 shadow-xl shadow-violet-500/20"
+          : selected
+          ? "border-indigo-500/40 shadow-lg shadow-indigo-500/10"
+          : "border-white/[0.06] hover:border-white/20"
+      }`}
+    >
+      {/* ── Question header (dark purple panel) ────────────────────────────── */}
+      <div className="bg-gradient-to-b from-[#2d2060] to-[#1e1545] px-6 pt-5 pb-4 relative">
+        {/* Question number badge */}
+        <div className="flex items-center gap-3 mb-3">
+          <span
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg text-sm font-bold flex-shrink-0 transition-colors ${
+              selected ? "bg-violet-600 text-white" : "bg-white/15 text-slate-300"
+            }`}
+          >
+            {idx + 1}
+          </span>
+        </div>
+
+        {/* Question text */}
+        <p className="text-center text-white text-[16px] sm:text-[18px] font-semibold leading-snug min-h-[2.5rem]">
+          {q.question}
+        </p>
+
+        {/* Optional image */}
+        {q.imageUrl && (
+          <div className="mt-4 flex justify-center">
+            <div className="relative w-full rounded-xl overflow-hidden border border-white/10">
+              <img
+                src={q.imageUrl}
+                alt={`Hình minh họa câu ${idx + 1}`}
+                className="w-full h-auto max-h-72 object-contain bg-black/20"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Answer tiles (2×2 grid, Kahoot-style colors) ───────────────────── */}
+      <div className="grid grid-cols-2 gap-2 p-2 bg-[#100d1f]">
+        {q.options.map((opt) => {
+          const style = OPTION_STYLES[opt.key];
+          const isSelected = selected === opt.key;
+          return (
+            <button
+              key={opt.key}
+              onClick={() => onSelect(opt.key)}
+              className={`
+                group relative flex items-center gap-3 px-4 py-4 rounded-xl
+                text-white font-semibold text-sm leading-snug text-left
+                transition-all duration-150 cursor-pointer min-h-[64px]
+                ${isSelected
+                  ? `${style.selectedBg} ring-2 ring-white/70 shadow-lg scale-[0.98]`
+                  : `${style.bg} ${style.hoverBg} hover:scale-[1.02] active:scale-[0.97]`
+                }
+              `}
+            >
+              {/* Letter label */}
+              <span className="w-7 h-7 rounded-lg bg-black/20 flex items-center justify-center text-base font-black flex-shrink-0">
+                {style.label}
+              </span>
+              <span className="flex-1 line-clamp-3">{opt.text}</span>
+              {/* Check mark when selected */}
+              {isSelected && (
+                <svg className="w-5 h-5 text-white/90 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function QuizPage({ onSubmit }: QuizPageProps) {
+export default function QuizPage({ onSubmit, examId, examName, onBackHome }: QuizPageProps) {
   const { user, logout } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,13 +195,12 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
 
   const questionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
-  // Load questions
   useEffect(() => {
-    fetchQuestions().then((qs) => {
+    fetchQuestions(examId).then((qs) => {
       setQuestions(qs);
       setIsLoading(false);
     });
-  }, []);
+  }, [examId]);
 
   const handleExpire = useCallback(() => {
     setShowModal(false);
@@ -90,20 +208,18 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
   }, [answers, questions, onSubmit]);
 
   const { remaining, elapsed, formatted } = useCountdown(QUIZ_DURATION_SEC, handleExpire);
-  const isUrgent = remaining <= 5 * 60; // < 5 min
+  const isUrgent = remaining <= 5 * 60;
 
-  // ── Answer selection ─────────────────────────────────────────────────────────
   function selectAnswer(questionId: number, key: OptionKey) {
     setAnswers((prev) => ({ ...prev, [questionId]: key }));
+    setActiveQuestion(questionId);
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
   function confirmSubmit() {
     setShowModal(false);
     onSubmit(answers, questions, elapsed);
   }
 
-  // ── Jump to question ─────────────────────────────────────────────────────────
   function jumpTo(id: number) {
     setActiveQuestion(id);
     questionRefs.current.get(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -114,8 +230,8 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
 
   return (
     <div className="min-h-screen bg-[#080b14] text-white">
-      {/* ── STICKY HEADER ──────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-[#080b14]/80 backdrop-blur-xl border-b border-white/10">
+      {/* ── STICKY HEADER ────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-[#080b14]/90 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           {/* Logo + title */}
           <div className="flex items-center gap-3 min-w-0">
@@ -125,7 +241,7 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
               </svg>
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white leading-tight truncate">Bài thi Tschool</p>
+              <p className="text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool"}</p>
               <p className="text-xs text-slate-400 leading-tight truncate">{user?.name}</p>
             </div>
           </div>
@@ -141,8 +257,8 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
             <p className="text-xs text-slate-400">{answeredCount}/{questions.length} câu đã trả lời</p>
           </div>
 
-          {/* Timer + logout */}
-          <div className="flex items-center gap-3">
+          {/* Timer + admin + logout */}
+          <div className="flex items-center gap-2">
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-mono font-semibold transition-colors ${
               isUrgent
                 ? "bg-red-500/15 border-red-500/40 text-red-400 animate-pulse"
@@ -153,6 +269,32 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
               </svg>
               {formatted}
             </div>
+            {onBackHome && (
+              <button
+                onClick={onBackHome}
+                title="Chọn đề khác"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                  bg-white/5 text-slate-300 border border-white/15
+                  hover:bg-white/10 hover:text-white transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+                Đổi đề
+              </button>
+            )}
+            <Link
+              href="/admin"
+              title="Thêm câu hỏi"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                bg-violet-600/20 text-violet-300 border border-violet-500/30
+                hover:bg-violet-600/40 hover:text-white transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Thêm câu
+            </Link>
             <button
               onClick={logout}
               title="Đăng xuất"
@@ -168,77 +310,21 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
 
       <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
         {/* ── QUESTION LIST ──────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 space-y-4">
+        <main className="flex-1 min-w-0 space-y-5">
           {isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+            Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
-            questions.map((q, idx) => {
-              const selected = answers[q.id];
-              const isActive = activeQuestion === q.id;
-              return (
-                <div
-                  key={q.id}
-                  ref={(el) => { if (el) questionRefs.current.set(q.id, el); }}
-                  id={`question-${q.id}`}
-                  className={`rounded-2xl border transition-all duration-300 scroll-mt-24 ${
-                    isActive
-                      ? "bg-indigo-500/5 border-indigo-500/40 shadow-lg shadow-indigo-500/10"
-                      : selected
-                      ? "bg-white/[0.04] border-white/10"
-                      : "bg-white/[0.03] border-white/[0.06] hover:border-white/15"
-                  }`}
-                >
-                  {/* Question header */}
-                  <div className="px-6 pt-5 pb-3 flex items-start gap-4">
-                    <span className={`flex-shrink-0 w-8 h-8 rounded-lg text-sm font-bold flex items-center justify-center transition-colors ${
-                      selected
-                        ? "bg-indigo-600 text-white"
-                        : "bg-white/10 text-slate-400"
-                    }`}>
-                      {idx + 1}
-                    </span>
-                    <p className="text-[15px] text-slate-100 leading-relaxed pt-0.5 font-medium">
-                      {q.question}
-                    </p>
-                  </div>
-
-                  {/* Options */}
-                  <div className="px-6 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-2.5 ml-12">
-                    {q.options.map((opt) => {
-                      const isSelected = selected === opt.key;
-                      return (
-                        <button
-                          key={opt.key}
-                          onClick={() => {
-                            selectAnswer(q.id, opt.key);
-                            setActiveQuestion(q.id);
-                          }}
-                          className={`group relative flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all duration-200 cursor-pointer
-                            ${isSelected
-                              ? "bg-indigo-600/20 border-indigo-500/70 text-white shadow-md shadow-indigo-500/10"
-                              : "bg-white/[0.03] border-white/[0.08] text-slate-300 hover:bg-white/[0.07] hover:border-white/20 hover:text-white active:scale-[0.98]"
-                            }`}
-                        >
-                          {/* Key badge */}
-                          <span className={`flex-shrink-0 w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-colors ${
-                            isSelected ? "bg-indigo-500 text-white" : "bg-white/10 text-slate-400 group-hover:bg-white/15"
-                          }`}>
-                            {opt.key}
-                          </span>
-                          <span className="text-sm leading-snug">{opt.text}</span>
-                          {/* Check icon */}
-                          {isSelected && (
-                            <svg className="w-4 h-4 text-indigo-400 ml-auto flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
+            questions.map((q, idx) => (
+              <QuestionCard
+                key={q.id}
+                q={q}
+                idx={idx}
+                selected={answers[q.id]}
+                isActive={activeQuestion === q.id}
+                onSelect={(key) => selectAnswer(q.id, key)}
+                cardRef={(el) => { if (el) questionRefs.current.set(q.id, el); }}
+              />
+            ))
           )}
 
           {/* Submit button (bottom) */}
@@ -321,6 +407,23 @@ export default function QuizPage({ onSubmit }: QuizPageProps) {
         onConfirm={confirmSubmit}
         onCancel={() => setShowModal(false)}
       />
+
+      {/* Mobile FAB – link to admin (hidden on sm+) */}
+      <Link
+        href="/admin"
+        className="sm:hidden fixed bottom-6 right-6 z-40
+          flex items-center gap-2 px-4 py-3 rounded-2xl
+          bg-gradient-to-r from-violet-600 to-indigo-600
+          text-white text-sm font-bold
+          shadow-2xl shadow-violet-500/40
+          active:scale-95 transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        Thêm câu hỏi
+      </Link>
     </div>
+
   );
 }

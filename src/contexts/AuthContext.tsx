@@ -1,8 +1,7 @@
 /**
  * AuthContext.tsx
  * ─────────────────────────────────────────────────────────────────────────────
- * Global authentication context using React Context API + localStorage.
- * Simulates a real auth flow: register → login → session persistence.
+ * Global authentication context using React Context API + Supabase database.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -16,28 +15,29 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import { supabase } from "@/lib/supabase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface User {
   id: string;
   name: string;
   email: string;
-  avatar: string; // initials-based avatar color
+  avatar: string;
+  role: "admin" | "student";
+  approved: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; pending?: boolean; error?: string }>;
   logout: () => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const STORAGE_KEY = "tschool_users";
 const SESSION_KEY = "tschool_session";
 
 /** Return a deterministic avatar color from user name */
@@ -75,57 +75,109 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /** Simulates login API – validates against localStorage "DB" */
+  /** Login against Supabase user_profiles table */
   const login = useCallback(
     async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-      // Simulate network delay
-      await new Promise((r) => setTimeout(r, 600));
+      try {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("email", email.toLowerCase().trim())
+          .eq("password_hash", pseudoHash(password));
 
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const users: Array<User & { passwordHash: string }> = raw ? JSON.parse(raw) : [];
+        if (error || !data || data.length === 0) {
+          return { success: false, error: "Email hoặc mật khẩu không đúng." };
+        }
 
-      const found = users.find(
-        (u) => u.email.toLowerCase() === email.toLowerCase() &&
-               u.passwordHash === pseudoHash(password)
-      );
+        const profile = data[0];
 
-      if (!found) return { success: false, error: "Email hoặc mật khẩu không đúng." };
+        if (!profile.approved && profile.role !== "admin") {
+          return { success: false, error: "Tài khoản của bạn chưa được quản trị viên duyệt." };
+        }
 
-      const session: User = { id: found.id, name: found.name, email: found.email, avatar: found.avatar };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      setUser(session);
-      return { success: true };
+        const session: User = {
+          id: String(profile.id),
+          name: profile.name,
+          email: profile.email,
+          avatar: getAvatarColor(profile.name),
+          role: profile.role as "admin" | "student",
+          approved: profile.approved,
+        };
+
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        setUser(session);
+        return { success: true };
+      } catch (err: unknown) {
+        return { success: false, error: err instanceof Error ? err.message : "Lỗi kết nối database." };
+      }
     },
     []
   );
 
-  /** Simulates register API – stores in localStorage "DB" */
+  /** Register user into Supabase user_profiles table */
   const register = useCallback(
-    async (name: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-      await new Promise((r) => setTimeout(r, 600));
+    async (name: string, email: string, password: string): Promise<{ success: boolean; pending?: boolean; error?: string }> => {
+      try {
+        const cleanEmail = email.toLowerCase().trim();
 
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const users: Array<User & { passwordHash: string }> = raw ? JSON.parse(raw) : [];
+        // Check if email already exists
+        const { data: existing } = await supabase
+          .from("user_profiles")
+          .select("id")
+          .eq("email", cleanEmail);
 
-      if (users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
-        return { success: false, error: "Email này đã được đăng ký." };
+        if (existing && existing.length > 0) {
+          return { success: false, error: "Email này đã được đăng ký." };
+        }
+
+        // Check if this is the first user
+        const { count } = await supabase
+          .from("user_profiles")
+          .select("*", { count: "exact", head: true });
+
+        const isFirstUser = count === 0;
+        const isAlwaysAdmin = cleanEmail.includes("admin");
+
+        const role = (isFirstUser || isAlwaysAdmin) ? "admin" : "student";
+        const approved = (isFirstUser || isAlwaysAdmin);
+
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .insert({
+            name: name.trim(),
+            email: cleanEmail,
+            password_hash: pseudoHash(password),
+            role,
+            approved,
+          })
+          .select();
+
+        if (error || !data || data.length === 0) {
+          throw new Error(error?.message || "Không thể tạo tài khoản.");
+        }
+
+        if (!approved) {
+          // Requires approval
+          return { success: true, pending: true };
+        }
+
+        // Auto login for approved admin/users
+        const profile = data[0];
+        const session: User = {
+          id: String(profile.id),
+          name: profile.name,
+          email: profile.email,
+          avatar: getAvatarColor(profile.name),
+          role: profile.role as "admin" | "student",
+          approved: profile.approved,
+        };
+
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        setUser(session);
+        return { success: true };
+      } catch (err: unknown) {
+        return { success: false, error: err instanceof Error ? err.message : "Đăng ký thất bại." };
       }
-
-      const newUser = {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        avatar: getAvatarColor(name),
-        passwordHash: pseudoHash(password),
-      };
-
-      users.push(newUser);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-
-      const session: User = { id: newUser.id, name: newUser.name, email: newUser.email, avatar: newUser.avatar };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      setUser(session);
-      return { success: true };
     },
     []
   );

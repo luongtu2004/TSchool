@@ -26,6 +26,16 @@ export interface Question {
   options: Option[];
   answer: OptionKey;
   explanation?: string;
+  imageUrl?: string;
+  examId?: number;
+}
+
+export interface Exam {
+  id: number;
+  name: string;
+  description?: string;
+  questionCount?: number;
+  created_at?: string;
 }
 
 // ─── 30 mock questions extracted / adapted from Tschool curriculum ────────────
@@ -393,14 +403,87 @@ const QUESTIONS: Question[] = [
 ];
 
 /**
- * Simulates an async API call to fetch quiz questions.
- * In production, replace with: fetch('/api/questions')
- * @param delayMs - artificial delay to simulate network latency
+ * Fetch questions, optionally filtered by examId.
+ * Falls back to local mock data if Supabase unavailable.
  */
-export async function fetchQuestions(delayMs = 800): Promise<Question[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(QUESTIONS), delayMs);
-  });
+export async function fetchQuestions(examId?: number): Promise<Question[]> {
+  try {
+    const { supabase } = await import("./supabase");
+    let query = supabase.from("questions").select("*").order("id", { ascending: true });
+    if (examId) query = query.eq("exam_id", examId);
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) throw new Error("no data");
+    return data.map((row) => ({
+      id: row.id,
+      question: row.question,
+      options: [
+        { key: "A" as OptionKey, text: row.option_a },
+        { key: "B" as OptionKey, text: row.option_b },
+        { key: "C" as OptionKey, text: row.option_c },
+        { key: "D" as OptionKey, text: row.option_d },
+      ],
+      answer: row.answer as OptionKey,
+      explanation: row.explanation,
+      imageUrl: row.image_url,
+      examId: row.exam_id,
+    }));
+  } catch {
+    return new Promise((resolve) => setTimeout(() => resolve(QUESTIONS), 600));
+  }
+}
+
+/** Fetch all exams from Supabase */
+export async function fetchExams(): Promise<Exam[]> {
+  try {
+    const { supabase } = await import("./supabase");
+    const { data, error } = await supabase
+      .from("exams")
+      .select("id, name, description, created_at")
+      .order("created_at", { ascending: false });
+    if (error || !data) throw new Error("no exams");
+    // Fetch question counts
+    const withCounts = await Promise.all(
+      data.map(async (exam) => {
+        const { count } = await supabase
+          .from("questions")
+          .select("*", { count: "exact", head: true })
+          .eq("exam_id", exam.id);
+        return { ...exam, questionCount: count ?? 0 };
+      })
+    );
+    return withCounts;
+  } catch {
+    return [];
+  }
+}
+
+/** Save a quiz attempt score to Supabase */
+export async function saveAttempt(
+  userId: string,
+  examId: number,
+  score: number,
+  correctCount: number,
+  wrongCount: number,
+  skippedCount: number,
+  totalCount: number,
+  timeUsedSec: number
+): Promise<boolean> {
+  try {
+    const { supabase } = await import("./supabase");
+    const { error } = await supabase.from("quiz_attempts").insert({
+      user_id: parseInt(userId, 10),
+      exam_id: examId,
+      score,
+      correct_count: correctCount,
+      wrong_count: wrongCount,
+      skipped_count: skippedCount,
+      total_count: totalCount,
+      time_used_sec: timeUsedSec,
+    });
+    return !error;
+  } catch {
+    return false;
+  }
 }
 
 export default QUESTIONS;
