@@ -276,15 +276,15 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             {onBackHome && (
               <button
                 onClick={onBackHome}
-                title="Chọn đề khác"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                title="Thoát"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold
                   bg-white/5 text-slate-300 border border-white/15
                   hover:bg-white/10 hover:text-white transition-all"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                Đổi đề
+                <span className="hidden sm:inline">Thoát</span>
               </button>
             )}
             {user?.role === "admin" && (
