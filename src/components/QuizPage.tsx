@@ -239,54 +239,10 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
     <div className="min-h-screen bg-[#080b14] text-white">
       {/* ── STICKY HEADER ────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-[#080b14]/90 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Logo + title */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool"}</p>
-              <p className="text-xs text-slate-400 leading-tight truncate">Đang làm bài...</p>
-            </div>
-          </div>
-
-          {/* Progress */}
-          <div className="hidden sm:flex flex-col items-center gap-1 flex-1 max-w-xs">
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
-                style={{ width: `${progressPct}%` }}
-              />
-            </div>
-            <p className="text-xs text-slate-400">{answeredCount}/{questions.length} câu đã trả lời</p>
-          </div>
-
-          {/* Timer + admin + logout */}
-          <div className="flex items-center gap-2">
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-mono font-semibold transition-colors ${
-              isUrgent
-                ? "bg-red-500/15 border-red-500/40 text-red-400 animate-pulse"
-                : "bg-white/5 border-white/10 text-slate-300"
-            }`}>
-              <svg className="w-4 h-4 hidden sm:block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {formatted}
-            </div>
-            
-            {/* Nav Toggle (Mobile only) */}
-            <button
-              onClick={() => setIsNavOpen(!isNavOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-300 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all"
-              title="Danh sách câu hỏi"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
-            </button>
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-3 sm:gap-6">
+          
+          {/* ── LEFT: Back + Logo + Title ── */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {onBackHome && (
               <button
                 onClick={() => {
@@ -303,17 +259,62 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                   });
                 }}
                 title="Thoát"
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold
-                  bg-white/5 text-slate-300 border border-white/15
-                  hover:bg-white/10 hover:text-white transition-all"
+                className="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
               >
-                <svg className="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                <span className="hidden sm:inline">Thoát</span>
               </button>
             )}
-            {/* Admin Add Question button removed from Quiz view to avoid UX confusion */}
+
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 hidden sm:flex">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool"}</p>
+              <p className="text-[11px] sm:text-xs text-slate-400 leading-tight truncate">Đang làm bài...</p>
+            </div>
+          </div>
+
+          {/* ── CENTER: Progress (Hidden on mobile) ── */}
+          <div className="hidden md:flex flex-col items-center gap-1 flex-1 max-w-xs mx-4">
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <p className="text-xs text-slate-400">{answeredCount}/{questions.length} câu đã trả lời</p>
+          </div>
+
+          {/* ── RIGHT: Timer + Nav + Logout ── */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            
+            {/* Timer */}
+            <div className={`flex items-center gap-1.5 font-mono font-bold tracking-tight transition-colors ${
+              isUrgent ? "text-red-400 animate-pulse" : "text-white"
+            }`}>
+              <svg className={`w-4 h-4 sm:w-5 sm:h-5 ${isUrgent ? "text-red-400" : "text-slate-400"}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-[15px] sm:text-lg mt-[1px]">{formatted}</span>
+            </div>
+            
+            {/* Nav Toggle (Mobile only) */}
+            <button
+              onClick={() => setIsNavOpen(!isNavOpen)}
+              className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              title="Danh sách câu hỏi"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
+
+            {/* Logout */}
             <button
               onClick={() => {
                 setDialog({
@@ -329,9 +330,9 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                 });
               }}
               title="Đăng xuất"
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
+              className="p-2 -mr-2 sm:mr-0 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
               </svg>
             </button>
