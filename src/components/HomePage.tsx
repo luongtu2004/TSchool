@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Exam, fetchExams } from "@/lib/quizData";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminConfirmDialog, { DialogConfig } from "./AdminConfirmDialog";
 
 interface HomePageProps {
   onStartExam: (exam: Exam) => void;
@@ -24,6 +25,7 @@ export default function HomePage({ onStartExam }: HomePageProps) {
   const { user, logout } = useAuth();
   const [exams, setExams] = useState<Exam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dialog, setDialog] = useState<(DialogConfig & { onConfirm: () => void }) | null>(null);
 
   useEffect(() => {
     fetchExams().then((data) => {
@@ -66,9 +68,17 @@ export default function HomePage({ onStartExam }: HomePageProps) {
             )}
             <button
               onClick={() => {
-                if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                  logout();
-                }
+                setDialog({
+                  variant: "danger",
+                  title: "Đăng xuất?",
+                  message: "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?",
+                  confirmLabel: "Đăng xuất",
+                  cancelLabel: "Hủy",
+                  onConfirm: () => {
+                    setDialog(null);
+                    logout();
+                  }
+                });
               }}
               title="Đăng xuất"
               className="p-2 text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all"
@@ -223,6 +233,20 @@ export default function HomePage({ onStartExam }: HomePageProps) {
           </div>
         )}
       </div>
+
+      {/* ── GLOBAL DIALOG ─────────────────────────────────────────────────────── */}
+      {dialog && (
+        <AdminConfirmDialog
+          isOpen={true}
+          variant={dialog.variant}
+          title={dialog.title}
+          message={dialog.message}
+          confirmLabel={dialog.confirmLabel}
+          cancelLabel={dialog.cancelLabel}
+          onConfirm={dialog.onConfirm}
+          onCancel={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }

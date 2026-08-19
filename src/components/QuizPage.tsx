@@ -18,6 +18,7 @@ import Image from "next/image";
 import { Question, OptionKey, fetchQuestions } from "@/lib/quizData";
 import { useAuth } from "@/contexts/AuthContext";
 import ConfirmModal from "./ConfirmModal";
+import AdminConfirmDialog, { DialogConfig } from "./AdminConfirmDialog";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type UserAnswers = Record<number, OptionKey>;
@@ -195,6 +196,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
   const [showModal, setShowModal] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState<number | null>(null);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [dialog, setDialog] = useState<(DialogConfig & { onConfirm: () => void }) | null>(null);
 
   const questionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -277,9 +279,17 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             {onBackHome && (
               <button
                 onClick={() => {
-                  if (window.confirm("Bạn có chắc chắn muốn thoát? Kết quả làm bài sẽ không được lưu.")) {
-                    onBackHome();
-                  }
+                  setDialog({
+                    variant: "warning",
+                    title: "Thoát bài thi?",
+                    message: "Bạn có chắc chắn muốn thoát? Kết quả làm bài hiện tại sẽ không được lưu.",
+                    confirmLabel: "Thoát",
+                    cancelLabel: "Ở lại",
+                    onConfirm: () => {
+                      setDialog(null);
+                      onBackHome();
+                    }
+                  });
                 }}
                 title="Thoát"
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold
@@ -308,9 +318,17 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             )}
             <button
               onClick={() => {
-                if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                  logout();
-                }
+                setDialog({
+                  variant: "danger",
+                  title: "Đăng xuất?",
+                  message: "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?",
+                  confirmLabel: "Đăng xuất",
+                  cancelLabel: "Hủy",
+                  onConfirm: () => {
+                    setDialog(null);
+                    logout();
+                  }
+                });
               }}
               title="Đăng xuất"
               className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
@@ -450,6 +468,20 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
           </svg>
           Thêm câu hỏi
         </Link>
+      )}
+
+      {/* ── GLOBAL DIALOG ─────────────────────────────────────────────────────── */}
+      {dialog && (
+        <AdminConfirmDialog
+          isOpen={true}
+          variant={dialog.variant}
+          title={dialog.title}
+          message={dialog.message}
+          confirmLabel={dialog.confirmLabel}
+          cancelLabel={dialog.cancelLabel}
+          onConfirm={dialog.onConfirm}
+          onCancel={() => setDialog(null)}
+        />
       )}
     </div>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Question, OptionKey } from "@/lib/quizData";
 import { UserAnswers } from "./QuizPage";
 import { useAuth } from "@/contexts/AuthContext";
+import AdminConfirmDialog, { DialogConfig } from "./AdminConfirmDialog";
 
 interface ResultPageProps {
   questions: Question[];
@@ -57,6 +58,7 @@ function getTileClass(key: OptionKey, correct: OptionKey, user?: OptionKey) {
 export default function ResultPage({ questions, answers, timeUsedSec, onRetry, onBackHome }: ResultPageProps) {
   const { user, logout } = useAuth();
   const [showAll, setShowAll] = useState(false);
+  const [dialog, setDialog] = useState<(DialogConfig & { onConfirm: () => void }) | null>(null);
   const r = useMemo(() => calculateScore(questions, answers), [questions, answers]);
 
   const gradeInfo = r.pct >= 90
@@ -103,9 +105,17 @@ export default function ResultPage({ questions, answers, timeUsedSec, onRetry, o
             </Link>
             <button
               onClick={() => {
-                if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-                  logout();
-                }
+                setDialog({
+                  variant: "danger",
+                  title: "Đăng xuất?",
+                  message: "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?",
+                  confirmLabel: "Đăng xuất",
+                  cancelLabel: "Hủy",
+                  onConfirm: () => {
+                    setDialog(null);
+                    logout();
+                  }
+                });
               }}
               className="p-2 text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all"
               title="Đăng xuất"
@@ -342,6 +352,20 @@ export default function ResultPage({ questions, answers, timeUsedSec, onRetry, o
           )}
         </section>
       </div>
+
+      {/* ── GLOBAL DIALOG ─────────────────────────────────────────────────────── */}
+      {dialog && (
+        <AdminConfirmDialog
+          isOpen={true}
+          variant={dialog.variant}
+          title={dialog.title}
+          message={dialog.message}
+          confirmLabel={dialog.confirmLabel}
+          cancelLabel={dialog.cancelLabel}
+          onConfirm={dialog.onConfirm}
+          onCancel={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }
