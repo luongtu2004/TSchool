@@ -55,25 +55,25 @@ const OPTION_STYLES: Record<OptionKey, { bg: string; hoverBg: string; selectedBg
   A: {
     bg: "bg-white/5",
     hoverBg: "hover:bg-white/10",
-    selectedBg: "bg-indigo-600 border border-indigo-500",
+    selectedBg: "bg-emerald-600 border border-emerald-500",
     label: "A",
   },
   B: {
     bg: "bg-white/5",
     hoverBg: "hover:bg-white/10",
-    selectedBg: "bg-indigo-600 border border-indigo-500",
+    selectedBg: "bg-emerald-600 border border-emerald-500",
     label: "B",
   },
   C: {
     bg: "bg-white/5",
     hoverBg: "hover:bg-white/10",
-    selectedBg: "bg-indigo-600 border border-indigo-500",
+    selectedBg: "bg-emerald-600 border border-emerald-500",
     label: "C",
   },
   D: {
     bg: "bg-white/5",
     hoverBg: "hover:bg-white/10",
-    selectedBg: "bg-indigo-600 border border-indigo-500",
+    selectedBg: "bg-emerald-600 border border-emerald-500",
     label: "D",
   },
 };
