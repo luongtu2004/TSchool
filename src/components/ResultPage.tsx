@@ -101,9 +101,17 @@ export default function ResultPage({ questions, answers, timeUsedSec, onRetry, o
               </svg>
               Thêm câu
             </Link>
-            <button onClick={logout} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Đăng xuất">
+            <button
+              onClick={() => {
+                if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+                  logout();
+                }
+              }}
+              className="p-2 text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 rounded-lg transition-all"
+              title="Đăng xuất"
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
               </svg>
             </button>
           </div>

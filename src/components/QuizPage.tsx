@@ -194,6 +194,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
   const [answers, setAnswers] = useState<UserAnswers>({});
   const [showModal, setShowModal] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState<number | null>(null);
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   const questionRefs = useRef<Map<number, HTMLDivElement>>(new Map());
 
@@ -275,7 +276,11 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             </div>
             {onBackHome && (
               <button
-                onClick={onBackHome}
+                onClick={() => {
+                  if (window.confirm("Bạn có chắc chắn muốn thoát? Kết quả làm bài sẽ không được lưu.")) {
+                    onBackHome();
+                  }
+                }}
                 title="Thoát"
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold
                   bg-white/5 text-slate-300 border border-white/15
@@ -302,12 +307,16 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
               </Link>
             )}
             <button
-              onClick={logout}
+              onClick={() => {
+                if (window.confirm("Bạn có chắc chắn muốn đăng xuất?")) {
+                  logout();
+                }
+              }}
               title="Đăng xuất"
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-red-500/20 hover:text-red-400 transition-all"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
               </svg>
             </button>
           </div>
@@ -358,36 +367,47 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
         {!isLoading && (
           <aside className="w-full lg:w-56 flex-shrink-0">
             <div className="sticky top-20 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Câu hỏi</h3>
-              <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-5 gap-1.5 mb-4">
-                {questions.map((q, idx) => {
-                  const done = !!answers[q.id];
-                  return (
-                    <button
-                      key={q.id}
-                      onClick={() => jumpTo(q.id)}
-                      title={`Câu ${idx + 1}`}
-                      className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                        done
-                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                          : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      {idx + 1}
-                    </button>
-                  );
-                })}
+              <div 
+                className="flex items-center justify-between cursor-pointer lg:cursor-auto mb-3"
+                onClick={() => setIsNavOpen(!isNavOpen)}
+              >
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Danh sách câu hỏi</h3>
+                <svg className={`w-4 h-4 text-slate-400 lg:hidden transition-transform ${isNavOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
               </div>
-
-              {/* Legend */}
-              <div className="space-y-1.5 pt-3 border-t border-white/10 text-xs">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <div className="w-4 h-4 rounded bg-indigo-600" />
-                  <span>Đã trả lời ({answeredCount})</span>
+              
+              <div className={`lg:block transition-all ${isNavOpen ? "block" : "hidden"}`}>
+                <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-5 gap-1.5 mb-4 max-h-[50vh] overflow-y-auto pr-1">
+                  {questions.map((q, idx) => {
+                    const done = !!answers[q.id];
+                    return (
+                      <button
+                        key={q.id}
+                        onClick={() => jumpTo(q.id)}
+                        title={`Câu ${idx + 1}`}
+                        className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                          done
+                            ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                            : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                        }`}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center gap-2 text-slate-400">
-                  <div className="w-4 h-4 rounded bg-white/10" />
-                  <span>Chưa trả lời ({questions.length - answeredCount})</span>
+
+                {/* Legend */}
+                <div className="space-y-1.5 pt-3 border-t border-white/10 text-xs">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <div className="w-4 h-4 rounded bg-indigo-600" />
+                    <span>Đã trả lời ({answeredCount})</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <div className="w-4 h-4 rounded bg-white/10" />
+                    <span>Chưa trả lời ({questions.length - answeredCount})</span>
+                  </div>
                 </div>
               </div>
 
