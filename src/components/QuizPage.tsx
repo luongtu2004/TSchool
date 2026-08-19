@@ -341,7 +341,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col-reverse lg:flex-row gap-6">
         {/* ── QUESTION LIST ──────────────────────────────────────────────────── */}
         <main className="flex-1 min-w-0 space-y-5">
           {isLoading ? (
