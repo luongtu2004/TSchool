@@ -159,7 +159,7 @@ export default function AdminPage() {
       return;
     }
     setIsQuestionsLoading(true);
-    const { data } = await supabase.from("questions").select("*").eq("exam_id", parseInt(selectedFilterExamId)).order("created_at", { ascending: false });
+    const { data } = await supabase.from("questions").select("*").eq("exam_id", parseInt(selectedFilterExamId)).order("id", { ascending: true });
     if (data) setQuestionsList(data as DbQuestion[]);
     setIsQuestionsLoading(false);
   }
@@ -906,11 +906,14 @@ export default function AdminPage() {
                     <div key={q.id} className="bg-white/[0.04] border border-white/10 hover:border-white/20 rounded-2xl p-4 flex flex-col md:flex-row gap-4 justify-between transition-all">
                       <div className="flex-1 min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded">
+                          <span className="bg-indigo-600/20 text-indigo-300 border border-indigo-500/20 px-2 py-0.5 rounded font-semibold">
                             {examName}
                           </span>
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded font-bold">
+                            Câu {idx + 1}
+                          </span>
                           <span className="bg-white/5 text-slate-400 px-2 py-0.5 rounded">
-                            Câu ID: #{q.id}
+                            ID: #{q.id}
                           </span>
                         </div>
                         <h4 className="font-bold text-sm sm:text-base text-white leading-snug">{q.question}</h4>
