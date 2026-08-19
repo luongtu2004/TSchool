@@ -274,7 +274,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             </div>
             
             <div className="min-w-0">
-              <p className="text-[13px] sm:text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool"}</p>
+              <p className="text-[13px] sm:text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool Basic"}</p>
               <p className="text-[11px] sm:text-xs text-slate-400 leading-tight truncate">Đang làm bài...</p>
             </div>
           </div>

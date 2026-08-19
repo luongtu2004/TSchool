@@ -10,12 +10,12 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "T+ School – Luyện thi trắc nghiệm trực tuyến",
+  title: "Tschool Basic – Luyện thi trắc nghiệm trực tuyến",
   description:
-    "Nền tảng luyện thi trắc nghiệm trực tuyến T+ School. Ôn tập hiệu quả với hệ thống câu hỏi phong phú, chấm điểm tự động và phân tích chi tiết.",
-  keywords: ["trắc nghiệm", "luyện thi", "T+ School", "tschool", "học trực tuyến"],
+    "Nền tảng luyện thi trắc nghiệm trực tuyến Tschool Basic. Ôn tập hiệu quả với hệ thống câu hỏi phong phú, chấm điểm tự động và phân tích chi tiết.",
+  keywords: ["trắc nghiệm", "luyện thi", "Tschool Basic", "tschool", "học trực tuyến"],
   openGraph: {
-    title: "T+ School – Luyện thi trắc nghiệm",
+    title: "Tschool Basic – Luyện thi trắc nghiệm",
     description: "Hệ thống thi trắc nghiệm trực tuyến với chấm điểm tự động.",
     type: "website",
   },
