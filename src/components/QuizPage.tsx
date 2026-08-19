@@ -249,7 +249,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             </div>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white leading-tight truncate">{examName ?? "Bài thi Tschool"}</p>
-              <p className="text-xs text-slate-400 leading-tight truncate">{user?.name}</p>
+              <p className="text-xs text-slate-400 leading-tight truncate">Đang làm bài...</p>
             </div>
           </div>
 
@@ -271,11 +271,22 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                 ? "bg-red-500/15 border-red-500/40 text-red-400 animate-pulse"
                 : "bg-white/5 border-white/10 text-slate-300"
             }`}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-4 h-4 hidden sm:block" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {formatted}
             </div>
+            
+            {/* Nav Toggle (Mobile only) */}
+            <button
+              onClick={() => setIsNavOpen(!isNavOpen)}
+              className="lg:hidden p-2 rounded-lg text-slate-300 bg-white/5 border border-white/10 hover:text-white hover:bg-white/10 transition-all"
+              title="Danh sách câu hỏi"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
             {onBackHome && (
               <button
                 onClick={() => {
@@ -302,20 +313,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                 <span className="hidden sm:inline">Thoát</span>
               </button>
             )}
-            {user?.role === "admin" && (
-              <Link
-                href="/admin"
-                title="Thêm câu hỏi"
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                  bg-violet-600/20 text-violet-300 border border-violet-500/30
-                  hover:bg-violet-600/40 hover:text-white transition-all"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Thêm câu
-              </Link>
-            )}
+            {/* Admin Add Question button removed from Quiz view to avoid UX confusion */}
             <button
               onClick={() => {
                 setDialog({
@@ -341,7 +339,45 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col-reverse lg:flex-row gap-6">
+      {/* ── MOBILE NAV OVERLAY ────────────────────────────────────────────────── */}
+      {isNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-20 bg-black/60 backdrop-blur-sm" onClick={() => setIsNavOpen(false)}>
+          <div className="absolute top-[72px] inset-x-0 bg-[#101426] border-b border-white/10 p-4 max-h-[60vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Danh sách câu hỏi</h3>
+            <div className="grid grid-cols-7 sm:grid-cols-10 gap-2 mb-4">
+              {questions.map((q, idx) => {
+                const done = !!answers[q.id];
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => { jumpTo(q.id); setIsNavOpen(false); }}
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg text-xs font-semibold transition-all duration-150 flex items-center justify-center ${
+                      done
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/20"
+                        : "bg-white/10 text-slate-300 hover:bg-white/20"
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Mobile Nav Legend */}
+            <div className="space-y-1.5 pt-3 border-t border-white/10 text-xs">
+              <div className="flex items-center gap-2 text-slate-400">
+                <div className="w-4 h-4 rounded bg-indigo-600" />
+                <span>Đã trả lời ({answeredCount})</span>
+              </div>
+              <div className="flex items-center gap-2 text-slate-400">
+                <div className="w-4 h-4 rounded bg-white/10" />
+                <span>Chưa trả lời ({questions.length - answeredCount})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
         {/* ── QUESTION LIST ──────────────────────────────────────────────────── */}
         <main className="flex-1 min-w-0 space-y-5 pb-24 sm:pb-8">
           {isLoading ? (
@@ -381,51 +417,41 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
           )}
         </main>
 
-        {/* ── QUESTION NAVIGATOR (sidebar/bottom) ───────────────────────────── */}
+        {/* ── QUESTION NAVIGATOR (DESKTOP ONLY) ───────────────────────────── */}
         {!isLoading && (
-          <aside className="w-full lg:w-56 flex-shrink-0">
+          <aside className="hidden lg:block w-56 flex-shrink-0">
             <div className="sticky top-20 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
-              <div 
-                className="flex items-center justify-between cursor-pointer lg:cursor-auto mb-3"
-                onClick={() => setIsNavOpen(!isNavOpen)}
-              >
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Danh sách câu hỏi</h3>
-                <svg className={`w-4 h-4 text-slate-400 lg:hidden transition-transform ${isNavOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                </svg>
-              </div>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Danh sách câu hỏi</h3>
               
-              <div className={`lg:block transition-all ${isNavOpen ? "block" : "hidden"}`}>
-                <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-5 gap-1.5 mb-4 max-h-[50vh] overflow-y-auto pr-1">
-                  {questions.map((q, idx) => {
-                    const done = !!answers[q.id];
-                    return (
-                      <button
-                        key={q.id}
-                        onClick={() => jumpTo(q.id)}
-                        title={`Câu ${idx + 1}`}
-                        className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                          done
-                            ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                            : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
-                        }`}
-                      >
-                        {idx + 1}
-                      </button>
-                    );
-                  })}
-                </div>
+              <div className="grid grid-cols-5 gap-1.5 mb-4 max-h-[60vh] overflow-y-auto pr-1">
+                {questions.map((q, idx) => {
+                  const done = !!answers[q.id];
+                  return (
+                    <button
+                      key={q.id}
+                      onClick={() => jumpTo(q.id)}
+                      title={`Câu ${idx + 1}`}
+                      className={`w-8 h-8 rounded-lg text-xs font-semibold transition-all duration-150 ${
+                        done
+                          ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                          : "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
 
-                {/* Legend */}
-                <div className="space-y-1.5 pt-3 border-t border-white/10 text-xs">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <div className="w-4 h-4 rounded bg-indigo-600" />
-                    <span>Đã trả lời ({answeredCount})</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <div className="w-4 h-4 rounded bg-white/10" />
-                    <span>Chưa trả lời ({questions.length - answeredCount})</span>
-                  </div>
+              {/* Legend */}
+              <div className="space-y-1.5 pt-3 border-t border-white/10 text-xs">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <div className="w-4 h-4 rounded bg-indigo-600" />
+                  <span>Đã trả lời ({answeredCount})</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <div className="w-4 h-4 rounded bg-white/10" />
+                  <span>Chưa trả lời ({questions.length - answeredCount})</span>
                 </div>
               </div>
 
@@ -452,23 +478,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
         onCancel={() => setShowModal(false)}
       />
 
-      {/* Mobile FAB – link to admin (hidden on sm+) */}
-      {user?.role === "admin" && (
-        <Link
-          href="/admin"
-          className="sm:hidden fixed bottom-6 right-6 z-40
-            flex items-center gap-2 px-4 py-3 rounded-2xl
-            bg-gradient-to-r from-violet-600 to-indigo-600
-            text-white text-sm font-bold
-            shadow-2xl shadow-violet-500/40
-            active:scale-95 transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          Thêm câu hỏi
-        </Link>
-      )}
+      {/* Mobile FAB removed to prevent overlap and UX confusion */}
 
       {/* ── GLOBAL DIALOG ─────────────────────────────────────────────────────── */}
       {dialog && (
