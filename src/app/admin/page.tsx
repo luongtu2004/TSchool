@@ -29,7 +29,7 @@ const EMPTY_FORM = {
   answer: "A" as OptionKey, explanation: "",
 };
 
-interface Exam { id: number; name: string; description?: string }
+interface Exam { id: number; name: string; description?: string; time_limit_min?: number; }
 interface DbQuestion {
   id: number;
   question: string;
