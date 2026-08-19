@@ -154,12 +154,12 @@ export default function AdminPage() {
   }
 
   async function loadQuestions() {
-    setIsQuestionsLoading(true);
-    let query = supabase.from("questions").select("*").order("created_at", { ascending: false });
-    if (selectedFilterExamId !== "all") {
-      query = query.eq("exam_id", parseInt(selectedFilterExamId));
+    if (selectedFilterExamId === "all") {
+      setQuestionsList([]);
+      return;
     }
-    const { data } = await query;
+    setIsQuestionsLoading(true);
+    const { data } = await supabase.from("questions").select("*").eq("exam_id", parseInt(selectedFilterExamId)).order("created_at", { ascending: false });
     if (data) setQuestionsList(data as DbQuestion[]);
     setIsQuestionsLoading(false);
   }
@@ -837,25 +837,62 @@ export default function AdminPage() {
 
         {/* ── MANAGE QUESTIONS TAB ────────────────────────────────────────── */}
         {tab === "manage-questions" && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
-              <div>
-                <h3 className="font-bold text-sm">Bộ lọc câu hỏi</h3>
-                <p className="text-xs text-slate-400">Chọn đề thi để xem câu hỏi chi tiết</p>
+          selectedFilterExamId === "all" ? (
+            <div className="space-y-4">
+              <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 flex justify-between items-center">
+                <div>
+                  <h3 className="font-bold text-sm">Danh sách đề thi</h3>
+                  <p className="text-xs text-slate-400">Chọn một đề thi để xem và quản lý câu hỏi</p>
+                </div>
+                <span className="text-xs bg-white/5 text-slate-300 px-2.5 py-1 rounded-full border border-white/10 font-bold">
+                  {exams.length} đề thi
+                </span>
               </div>
-              <select
-                value={selectedFilterExamId}
-                onChange={(e) => setSelectedFilterExamId(e.target.value)}
-                className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-white text-xs sm:text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              >
-                <option value="all" className="bg-[#1a1040]">-- Tất cả đề thi --</option>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {exams.map((ex) => (
-                  <option key={ex.id} value={ex.id} className="bg-[#1a1040]">{ex.name}</option>
+                  <div 
+                    key={ex.id}
+                    onClick={() => setSelectedFilterExamId(String(ex.id))}
+                    className="group cursor-pointer bg-white/[0.02] border border-white/10 hover:border-indigo-500/50 hover:bg-white/[0.04] rounded-2xl p-5 transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/20 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 group-hover:from-indigo-600 group-hover:to-violet-600 transition-all">
+                          <svg className="w-5 h-5 text-indigo-400 group-hover:text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors truncate">{ex.name}</h4>
+                          {ex.time_limit_min && <p className="text-xs text-slate-400">⏱️ {ex.time_limit_min} phút</p>}
+                        </div>
+                      </div>
+                      {ex.description && <p className="text-xs text-slate-500 line-clamp-2">{ex.description}</p>}
+                    </div>
+                  </div>
                 ))}
-              </select>
+              </div>
             </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
+                <div>
+                  <button 
+                    onClick={() => setSelectedFilterExamId("all")}
+                    className="flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 mb-1.5 transition-colors font-semibold"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
+                    Quay lại danh sách đề thi
+                  </button>
+                  <h3 className="font-bold text-sm text-white">{exams.find((e) => String(e.id) === selectedFilterExamId)?.name}</h3>
+                </div>
+                <span className="text-xs bg-white/5 text-slate-300 px-2.5 py-1 rounded-full border border-white/10 font-bold">
+                  {questionsList.length} câu hỏi
+                </span>
+              </div>
 
-            {isQuestionsLoading ? (
+              {isQuestionsLoading ? (
               <div className="py-20 text-center text-slate-400 animate-pulse text-sm">Đang tải danh sách câu hỏi…</div>
             ) : questionsList.length === 0 ? (
               <div className="py-20 text-center border border-dashed border-white/10 rounded-2xl text-slate-400 text-sm">
@@ -930,7 +967,8 @@ export default function AdminPage() {
                 })}
               </div>
             )}
-          </div>
+            </div>
+          )
         )}
 
         {/* ── MANAGE USERS TAB ────────────────────────────────────────────── */}
