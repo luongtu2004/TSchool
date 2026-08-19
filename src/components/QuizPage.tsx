@@ -53,27 +53,27 @@ function useCountdown(initialSec: number, onExpire: () => void) {
 // ─── Option colors (Kahoot-style: blue, red, yellow, green) ──────────────────
 const OPTION_STYLES: Record<OptionKey, { bg: string; hoverBg: string; selectedBg: string; label: string }> = {
   A: {
-    bg: "bg-[#1368ce]",
-    hoverBg: "hover:bg-[#1a7ae0]",
-    selectedBg: "bg-[#0d52a8]",
+    bg: "bg-white/5",
+    hoverBg: "hover:bg-white/10",
+    selectedBg: "bg-indigo-600 border border-indigo-500",
     label: "A",
   },
   B: {
-    bg: "bg-[#d89e00]",
-    hoverBg: "hover:bg-[#e8ab00]",
-    selectedBg: "bg-[#b88500]",
+    bg: "bg-white/5",
+    hoverBg: "hover:bg-white/10",
+    selectedBg: "bg-indigo-600 border border-indigo-500",
     label: "B",
   },
   C: {
-    bg: "bg-[#d13b3b]",
-    hoverBg: "hover:bg-[#e04444]",
-    selectedBg: "bg-[#b03030]",
+    bg: "bg-white/5",
+    hoverBg: "hover:bg-white/10",
+    selectedBg: "bg-indigo-600 border border-indigo-500",
     label: "C",
   },
   D: {
-    bg: "bg-[#238c23]",
-    hoverBg: "hover:bg-[#2aa52a]",
-    selectedBg: "bg-[#1a7a1a]",
+    bg: "bg-white/5",
+    hoverBg: "hover:bg-white/10",
+    selectedBg: "bg-indigo-600 border border-indigo-500",
     label: "D",
   },
 };
@@ -129,7 +129,7 @@ function QuestionCard({ q, idx, selected, isActive, onSelect, cardRef }: Questio
         </div>
 
         {/* Question text */}
-        <p className="text-center text-white text-[16px] sm:text-[18px] font-semibold leading-snug min-h-[2.5rem]">
+        <p className="text-left text-white text-[16px] sm:text-[18px] font-semibold leading-snug min-h-[2.5rem]">
           {q.question}
         </p>
 
@@ -343,7 +343,7 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
 
       <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col-reverse lg:flex-row gap-6">
         {/* ── QUESTION LIST ──────────────────────────────────────────────────── */}
-        <main className="flex-1 min-w-0 space-y-5">
+        <main className="flex-1 min-w-0 space-y-5 pb-24 sm:pb-8">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
