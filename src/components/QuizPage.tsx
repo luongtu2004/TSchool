@@ -259,9 +259,9 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                   });
                 }}
                 title="Thoát"
-                className="p-2 -ml-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
+                className="w-8 h-8 flex items-center justify-center -ml-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
               </button>
@@ -306,10 +306,10 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
             {/* Nav Toggle (Mobile only) */}
             <button
               onClick={() => setIsNavOpen(!isNavOpen)}
-              className="lg:hidden p-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              className="lg:hidden w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-all"
               title="Danh sách câu hỏi"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
               </svg>
             </button>
@@ -330,9 +330,9 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
                 });
               }}
               title="Đăng xuất"
-              className="p-2 -mr-2 sm:mr-0 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+              className="w-8 h-8 flex items-center justify-center -mr-2 sm:mr-0 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9" />
               </svg>
             </button>

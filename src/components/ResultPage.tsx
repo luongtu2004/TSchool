@@ -117,7 +117,7 @@ export default function ResultPage({ questions, answers, timeUsedSec, onRetry, o
                   }
                 });
               }}
-              className="p-2 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-sm"
               title="Đăng xuất"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
