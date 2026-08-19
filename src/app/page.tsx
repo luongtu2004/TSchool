@@ -103,6 +103,7 @@ export default function Page() {
         onSubmit={handleSubmit}
         examId={selectedExam?.id}
         examName={selectedExam?.name}
+        timeLimitMin={selectedExam?.time_limit_min}
         onBackHome={handleBackHome}
       />
     );

@@ -35,6 +35,7 @@ export interface Exam {
   name: string;
   description?: string;
   questionCount?: number;
+  time_limit_min?: number;
   created_at?: string;
 }
 
@@ -438,7 +439,7 @@ export async function fetchExams(): Promise<Exam[]> {
     const { supabase } = await import("./supabase");
     const { data, error } = await supabase
       .from("exams")
-      .select("id, name, description, created_at")
+      .select("id, name, description, time_limit_min, created_at")
       .order("created_at", { ascending: false });
     if (error || !data) throw new Error("no exams");
     // Fetch question counts

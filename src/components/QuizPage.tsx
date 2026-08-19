@@ -26,11 +26,11 @@ interface QuizPageProps {
   onSubmit: (answers: UserAnswers, questions: Question[], timeUsed: number) => void;
   examId?: number;
   examName?: string;
+  timeLimitMin?: number;
   onBackHome?: () => void;
 }
 
 // ─── Timer hook ───────────────────────────────────────────────────────────────
-const QUIZ_DURATION_SEC = 45 * 60;
 
 function useCountdown(initialSec: number, onExpire: () => void) {
   const [remaining, setRemaining] = useState(initialSec);
@@ -185,7 +185,7 @@ function QuestionCard({ q, idx, selected, isActive, onSelect, cardRef }: Questio
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function QuizPage({ onSubmit, examId, examName, onBackHome }: QuizPageProps) {
+export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onBackHome }: QuizPageProps) {
   const { user, logout } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -202,12 +202,14 @@ export default function QuizPage({ onSubmit, examId, examName, onBackHome }: Qui
     });
   }, [examId]);
 
+  const durationSec = (timeLimitMin || 45) * 60;
+
   const handleExpire = useCallback(() => {
     setShowModal(false);
-    onSubmit(answers, questions, QUIZ_DURATION_SEC);
-  }, [answers, questions, onSubmit]);
+    onSubmit(answers, questions, durationSec);
+  }, [answers, questions, onSubmit, durationSec]);
 
-  const { remaining, elapsed, formatted } = useCountdown(QUIZ_DURATION_SEC, handleExpire);
+  const { remaining, elapsed, formatted } = useCountdown(durationSec, handleExpire);
   const isUrgent = remaining <= 5 * 60;
 
   function selectAnswer(questionId: number, key: OptionKey) {
@@ -283,18 +285,20 @@ export default function QuizPage({ onSubmit, examId, examName, onBackHome }: Qui
                 Đổi đề
               </button>
             )}
-            <Link
-              href="/admin"
-              title="Thêm câu hỏi"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                bg-violet-600/20 text-violet-300 border border-violet-500/30
-                hover:bg-violet-600/40 hover:text-white transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Thêm câu
-            </Link>
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                title="Thêm câu hỏi"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                  bg-violet-600/20 text-violet-300 border border-violet-500/30
+                  hover:bg-violet-600/40 hover:text-white transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Thêm câu
+              </Link>
+            )}
             <button
               onClick={logout}
               title="Đăng xuất"
@@ -308,7 +312,7 @@ export default function QuizPage({ onSubmit, examId, examName, onBackHome }: Qui
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
+      <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
         {/* ── QUESTION LIST ──────────────────────────────────────────────────── */}
         <main className="flex-1 min-w-0 space-y-5">
           {isLoading ? (
@@ -348,12 +352,12 @@ export default function QuizPage({ onSubmit, examId, examName, onBackHome }: Qui
           )}
         </main>
 
-        {/* ── QUESTION NAVIGATOR (sidebar) ──────────────────────────────────── */}
+        {/* ── QUESTION NAVIGATOR (sidebar/bottom) ───────────────────────────── */}
         {!isLoading && (
-          <aside className="hidden lg:block w-56 flex-shrink-0">
+          <aside className="w-full lg:w-56 flex-shrink-0">
             <div className="sticky top-20 bg-white/[0.04] border border-white/10 rounded-2xl p-4">
               <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-3">Câu hỏi</h3>
-              <div className="grid grid-cols-5 gap-1.5 mb-4">
+              <div className="grid grid-cols-7 sm:grid-cols-10 lg:grid-cols-5 gap-1.5 mb-4">
                 {questions.map((q, idx) => {
                   const done = !!answers[q.id];
                   return (
@@ -409,20 +413,22 @@ export default function QuizPage({ onSubmit, examId, examName, onBackHome }: Qui
       />
 
       {/* Mobile FAB – link to admin (hidden on sm+) */}
-      <Link
-        href="/admin"
-        className="sm:hidden fixed bottom-6 right-6 z-40
-          flex items-center gap-2 px-4 py-3 rounded-2xl
-          bg-gradient-to-r from-violet-600 to-indigo-600
-          text-white text-sm font-bold
-          shadow-2xl shadow-violet-500/40
-          active:scale-95 transition-all"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-        </svg>
-        Thêm câu hỏi
-      </Link>
+      {user?.role === "admin" && (
+        <Link
+          href="/admin"
+          className="sm:hidden fixed bottom-6 right-6 z-40
+            flex items-center gap-2 px-4 py-3 rounded-2xl
+            bg-gradient-to-r from-violet-600 to-indigo-600
+            text-white text-sm font-bold
+            shadow-2xl shadow-violet-500/40
+            active:scale-95 transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          Thêm câu hỏi
+        </Link>
+      )}
     </div>
 
   );

@@ -79,6 +79,7 @@ export default function AdminPage() {
   // ── Create exam state ─────────────────────────────────────────────────────
   const [examName, setExamName] = useState("");
   const [examDesc, setExamDesc] = useState("");
+  const [examTimeLimit, setExamTimeLimit] = useState(45);
   const [isCreatingExam, setIsCreatingExam] = useState(false);
 
   // ── Manage Questions state ────────────────────────────────────────────────
@@ -225,6 +226,7 @@ export default function AdminPage() {
           .update({
             name: examName.trim(),
             description: examDesc.trim() || null,
+            time_limit_min: examTimeLimit,
           })
           .eq("id", editingExam.id);
 
@@ -236,6 +238,7 @@ export default function AdminPage() {
         const { error } = await supabase.from("exams").insert({
           name: examName.trim(),
           description: examDesc.trim() || null,
+          time_limit_min: examTimeLimit,
         });
 
         if (error) throw error;
@@ -243,6 +246,7 @@ export default function AdminPage() {
       }
       setExamName("");
       setExamDesc("");
+      setExamTimeLimit(45);
       await loadExams();
     } catch (err: unknown) {
       showToast("error", "Lỗi", err instanceof Error ? err.message : "Lỗi không xác định.");
@@ -539,6 +543,7 @@ export default function AdminPage() {
                       setEditingExam(null);
                       setExamName("");
                       setExamDesc("");
+                      setExamTimeLimit(45);
                     }}
                     className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 border border-white/10 transition-all"
                   >
@@ -546,18 +551,33 @@ export default function AdminPage() {
                   </button>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-1.5">
-                  📋 Tên đề thi <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Đề ôn tập PLC"
-                  value={examName}
-                  onChange={(e) => setExamName(e.target.value)}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500
-                    focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+                    📋 Tên đề thi <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Đề ôn tập PLC"
+                    value={examName}
+                    onChange={(e) => setExamName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-1.5">
+                    ⏱️ Thời gian làm bài (phút)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={examTimeLimit}
+                    onChange={(e) => setExamTimeLimit(parseInt(e.target.value) || 0)}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-300 mb-1.5">📝 Mô tả (tuỳ chọn)</label>
@@ -598,6 +618,7 @@ export default function AdminPage() {
                             setEditingExam(ex);
                             setExamName(ex.name);
                             setExamDesc(ex.description || "");
+                            setExamTimeLimit(ex.time_limit_min || 45);
                           }}
                           className="p-1.5 text-xs font-bold text-violet-300 hover:text-white bg-violet-600/10 hover:bg-violet-600/30 border border-violet-500/20 rounded-lg transition-all"
                         >
