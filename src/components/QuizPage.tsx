@@ -146,8 +146,8 @@ function QuestionCard({ q, idx, selected, isActive, onSelect, cardRef }: Questio
         )}
       </div>
 
-      {/* ── Answer tiles (2×2 grid, Kahoot-style colors) ───────────────────── */}
-      <div className="grid grid-cols-2 gap-2 p-2 bg-[#100d1f]">
+      {/* ── Answer tiles (1 col mobile, 2 cols desktop) ──────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-2.5 bg-[#100d1f]">
         {q.options.map((opt) => {
           const style = OPTION_STYLES[opt.key];
           const isSelected = selected === opt.key;
@@ -166,7 +166,9 @@ function QuestionCard({ q, idx, selected, isActive, onSelect, cardRef }: Questio
               `}
             >
               {/* Letter label */}
-              <span className="w-7 h-7 rounded-lg bg-black/20 flex items-center justify-center text-base font-black flex-shrink-0">
+              <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-base font-extrabold flex-shrink-0 transition-colors shadow-sm ${
+                isSelected ? "bg-white text-slate-900" : "bg-white/25 text-white"
+              }`}>
                 {style.label}
               </span>
               <span className="flex-1 line-clamp-3">{opt.text}</span>

@@ -149,7 +149,7 @@ export default function AdminPage() {
   }, [tab, selectedFilterExamId, isReady]);
 
   async function loadExams() {
-    const { data } = await supabase.from("exams").select("id, name, description").order("created_at", { ascending: false });
+    const { data } = await supabase.from("exams").select("id, name, description, time_limit_min").order("created_at", { ascending: false });
     if (data) setExams(data);
   }
 
