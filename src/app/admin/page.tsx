@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, FormEvent } from "react";
+import { useState, useRef, useEffect, useCallback, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { ToastContainer, ToastData, ToastType } from "@/components/Toast";
+import AdminConfirmDialog, { DialogConfig } from "@/components/AdminConfirmDialog";
 
 type OptionKey = "A" | "B" | "C" | "D";
 type Tab = "add-question" | "create-exam" | "manage-questions" | "manage-users" | "view-scores";
@@ -95,19 +97,31 @@ export default function AdminPage() {
 
   // ── Shared ────────────────────────────────────────────────────────────────
   const [exams, setExams] = useState<Exam[]>([]);
-  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [toasts, setToasts] = useState<ToastData[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // ── Auth guard check ──────────────────────────────────────────────────────
+  // ── Confirm dialog state ──────────────────────────────────────────────────
+  const [dialog, setDialog] = useState<(DialogConfig & { onConfirm: () => void }) | null>(null);
+
+  // ── Edit states ───────────────────────────────────────────────────────────
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<DbQuestion | null>(null);
+
+  // ── Auth guard: redirect non-admin users ──────────────────────────────────
   const [isReady, setIsReady] = useState(false);
+  const { isLoading } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    if (isLoading) return; // wait for auth to resolve
+    if (!user || user.role !== "admin") {
+      router.replace("/"); // redirect students/guests to home
+    } else {
       setIsReady(true);
     }
-  }, [user]);
+  }, [user, isLoading, router]);
 
   // Load URL tab query if any
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -182,35 +196,84 @@ export default function AdminPage() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  function showToast(type: "success" | "error", msg: string) {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 5000);
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  function showToast(type: ToastType, title: string, message?: string) {
+    const id = `${Date.now()}-${Math.random()}`;
+    setToasts((prev) => [...prev.slice(-4), { id, type, title, message }]);
   }
 
-  // ── Create exam handler ───────────────────────────────────────────────────
-  async function handleCreateExam(e: FormEvent) {
+  function openDialog(cfg: DialogConfig & { onConfirm: () => void }) {
+    setDialog(cfg);
+  }
+  function closeDialog() {
+    setDialog(null);
+  }
+
+  // ── Create/Update exam handler ─────────────────────────────────────────────
+  async function handleSaveExam(e: FormEvent) {
     e.preventDefault();
     if (!examName.trim()) { showToast("error", "Vui lòng nhập tên đề thi."); return; }
     setIsCreatingExam(true);
     try {
-      const { error } = await supabase.from("exams").insert({
-        name: examName.trim(),
-        description: examDesc.trim() || null,
-      });
-      if (error) throw error;
-      showToast("success", `✅ Đã tạo đề "${examName.trim()}" thành công!`);
+      if (editingExam) {
+        // UPDATE Mode
+        const { error } = await supabase
+          .from("exams")
+          .update({
+            name: examName.trim(),
+            description: examDesc.trim() || null,
+          })
+          .eq("id", editingExam.id);
+
+        if (error) throw error;
+        showToast("success", "Cập nhật thành công", `Đề "${examName.trim()}" đã được cập nhật.`);
+        setEditingExam(null);
+      } else {
+        // INSERT Mode
+        const { error } = await supabase.from("exams").insert({
+          name: examName.trim(),
+          description: examDesc.trim() || null,
+        });
+
+        if (error) throw error;
+        showToast("success", "Tạo đề thi thành công", `Đề "${examName.trim()}" đã được tạo.`);
+      }
       setExamName("");
       setExamDesc("");
       await loadExams();
-      setTab("add-question");
     } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Lỗi không xác định.");
+      showToast("error", "Lỗi", err instanceof Error ? err.message : "Lỗi không xác định.");
     } finally {
       setIsCreatingExam(false);
     }
   }
 
-  // ── Add question handler ──────────────────────────────────────────────────
+  function handleDeleteExam(id: number, name: string) {
+    openDialog({
+      variant: "danger",
+      title: "Xóa đề thi?",
+      message: `Đề "${name}" và toàn bộ câu hỏi thuộc đề này sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.`,
+      confirmLabel: "Xóa đề thi",
+      cancelLabel: "Hủy",
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const { error } = await supabase.from("exams").delete().eq("id", id);
+          if (error) throw error;
+          showToast("success", "Đã xóa đề thi", `Đề "${name}" đã được xóa.`);
+          loadExams();
+          if (selectedExamId === String(id)) setSelectedExamId("");
+        } catch (err: unknown) {
+          showToast("error", "Xóa thất bại", err instanceof Error ? err.message : "Không thể xóa đề thi.");
+        }
+      },
+    });
+  }
+
+  // ── Add/Edit question handler ──────────────────────────────────────────────
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!form.question.trim() || !form.option_a || !form.option_b || !form.option_c || !form.option_d) {
@@ -223,7 +286,7 @@ export default function AdminPage() {
     }
 
     setIsSubmitting(true);
-    let imageUrl: string | null = null;
+    let imageUrl = imagePreview; // Default to existing preview if any
 
     try {
       if (imageFile) {
@@ -237,42 +300,76 @@ export default function AdminPage() {
         imageUrl = urlData.publicUrl;
       }
 
-      const { error } = await supabase.from("questions").insert({
-        question: form.question.trim(),
-        option_a: form.option_a.trim(),
-        option_b: form.option_b.trim(),
-        option_c: form.option_c.trim(),
-        option_d: form.option_d.trim(),
-        answer: form.answer,
-        explanation: form.explanation.trim() || null,
-        image_url: imageUrl,
-        exam_id: parseInt(selectedExamId),
-      });
+      if (editingQuestion) {
+        // UPDATE Mode
+        const { error } = await supabase
+          .from("questions")
+          .update({
+            question: form.question.trim(),
+            option_a: form.option_a.trim(),
+            option_b: form.option_b.trim(),
+            option_c: form.option_c.trim(),
+            option_d: form.option_d.trim(),
+            answer: form.answer,
+            explanation: form.explanation.trim() || null,
+            image_url: imageUrl,
+            exam_id: parseInt(selectedExamId),
+          })
+          .eq("id", editingQuestion.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        showToast("success", "Cập nhật thành công", "Câu hỏi đã được cập nhật.");
+        setEditingQuestion(null);
+        setForm(EMPTY_FORM);
+        removeImage();
+        setTab("manage-questions");
+      } else {
+        // INSERT Mode
+        const { error } = await supabase.from("questions").insert({
+          question: form.question.trim(),
+          option_a: form.option_a.trim(),
+          option_b: form.option_b.trim(),
+          option_c: form.option_c.trim(),
+          option_d: form.option_d.trim(),
+          answer: form.answer,
+          explanation: form.explanation.trim() || null,
+          image_url: imageUrl,
+          exam_id: parseInt(selectedExamId),
+        });
 
-      showToast("success", "✅ Câu hỏi đã được thêm! Đang về trang chủ…");
-      setForm(EMPTY_FORM);
-      removeImage();
-      setTimeout(() => router.push("/"), 1800);
+        if (error) throw error;
+        showToast("success", "Thêm câu hỏi thành công", "Đang quay về trang chủ…");
+        setForm(EMPTY_FORM);
+        removeImage();
+        setTimeout(() => router.push("/"), 1800);
+      }
     } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Đã xảy ra lỗi.");
+      showToast("error", "Lỗi", err instanceof Error ? err.message : "Đã xảy ra lỗi.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   // ── Manage Questions handlers ─────────────────────────────────────────────
-  async function handleDeleteQuestion(id: number) {
-    if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return;
-    try {
-      const { error } = await supabase.from("questions").delete().eq("id", id);
-      if (error) throw error;
-      showToast("success", "🗑️ Đã xóa câu hỏi thành công.");
-      loadQuestions();
-    } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Không thể xóa câu hỏi.");
-    }
+  function handleDeleteQuestion(id: number) {
+    openDialog({
+      variant: "danger",
+      title: "Xóa câu hỏi?",
+      message: `Câu hỏi #${id} sẽ bị xóa vĩnh viễn khỏi hệ thống. Hành động này không thể hoàn tác.`,
+      confirmLabel: "Xóa câu hỏi",
+      cancelLabel: "Hủy",
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const { error } = await supabase.from("questions").delete().eq("id", id);
+          if (error) throw error;
+          showToast("success", "Đã xóa câu hỏi", `Câu hỏi #${id} đã được xóa.`);
+          loadQuestions();
+        } catch (err: unknown) {
+          showToast("error", "Xóa thất bại", err instanceof Error ? err.message : "Không thể xóa câu hỏi.");
+        }
+      },
+    });
   }
 
   // ── Manage Users handlers ─────────────────────────────────────────────────
@@ -283,10 +380,10 @@ export default function AdminPage() {
         .update({ approved: !currentApproved })
         .eq("id", userId);
       if (error) throw error;
-      showToast("success", `Đã ${!currentApproved ? "duyệt" : "hủy duyệt"} tài khoản thành công.`);
+      showToast("success", !currentApproved ? "Đã duyệt tài khoản" : "Đã hủy duyệt", "Trạng thái tài khoản đã được cập nhật.");
       loadProfiles();
     } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Lỗi cập nhật trạng thái duyệt.");
+      showToast("error", "Lỗi", err instanceof Error ? err.message : "Lỗi cập nhật trạng thái duyệt.");
     }
   }
 
@@ -298,54 +395,63 @@ export default function AdminPage() {
         .update({ role: nextRole })
         .eq("id", userId);
       if (error) throw error;
-      showToast("success", "Đã cập nhật chức vụ thành công.");
+      showToast("success", "Đã cập nhật chức vụ", `Tài khoản đã được ${nextRole === "admin" ? "nâng lên Admin" : "hạ xuống Student"}.`);
       loadProfiles();
     } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Lỗi cập nhật chức vụ.");
+      showToast("error", "Lỗi", err instanceof Error ? err.message : "Lỗi cập nhật chức vụ.");
     }
   }
 
-  async function handleDeleteUser(userId: number) {
-    if (!confirm("Bạn có chắc chắn muốn xóa tài khoản này? Tất cả kết quả thi liên quan cũng sẽ bị xóa.")) return;
-    try {
-      const { error } = await supabase.from("user_profiles").delete().eq("id", userId);
-      if (error) throw error;
-      showToast("success", "Đã xóa tài khoản thành công.");
-      loadProfiles();
-    } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Không thể xóa tài khoản.");
-    }
+  function handleDeleteUser(userId: number, userName: string) {
+    openDialog({
+      variant: "danger",
+      title: "Xóa tài khoản?",
+      message: `Tài khoản "${userName}" và toàn bộ lịch sử thi của người này sẽ bị xóa vĩnh viễn.`,
+      confirmLabel: "Xóa tài khoản",
+      cancelLabel: "Hủy",
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const { error } = await supabase.from("user_profiles").delete().eq("id", userId);
+          if (error) throw error;
+          showToast("success", "Đã xóa tài khoản", `Tài khoản "${userName}" đã được xóa.`);
+          loadProfiles();
+        } catch (err: unknown) {
+          showToast("error", "Xóa thất bại", err instanceof Error ? err.message : "Không thể xóa tài khoản.");
+        }
+      },
+    });
   }
 
   // ── View Scores handler ───────────────────────────────────────────────────
-  async function handleClearAttempts() {
-    if (!confirm("Bạn có chắc chắn muốn xóa toàn bộ lịch sử điểm số?")) return;
-    try {
-      const { error } = await supabase.from("quiz_attempts").delete().neq("id", 0);
-      if (error) throw error;
-      showToast("success", "🧹 Đã xóa sạch lịch sử bảng điểm.");
-      loadAttempts();
-    } catch (err: unknown) {
-      showToast("error", err instanceof Error ? err.message : "Không thể xóa bảng điểm.");
-    }
+  function handleClearAttempts() {
+    openDialog({
+      variant: "warning",
+      title: "Xóa toàn bộ bảng điểm?",
+      message: "Toàn bộ lịch sử làm bài thi của tất cả học sinh sẽ bị xóa vĩnh viễn. Hành động này không thể hoàn tác.",
+      confirmLabel: "Xóa tất cả",
+      cancelLabel: "Hủy",
+      onConfirm: async () => {
+        closeDialog();
+        try {
+          const { error } = await supabase.from("quiz_attempts").delete().neq("id", 0);
+          if (error) throw error;
+          showToast("success", "Đã xóa bảng điểm", "Toàn bộ lịch sử làm bài đã được xóa sạch.");
+          loadAttempts();
+        } catch (err: unknown) {
+          showToast("error", "Xóa thất bại", err instanceof Error ? err.message : "Không thể xóa bảng điểm.");
+        }
+      },
+    });
   }
 
-  // Auth Protection render
-  if (!user || user.role !== "admin") {
+  // Show loading while auth resolves or redirect is in progress
+  if (!isReady) {
     return (
-      <div className="min-h-screen bg-[#080b14] flex flex-col items-center justify-center text-center p-6 text-white relative">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-red-600/10 blur-3xl pointer-events-none" />
-        <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-8 max-w-sm shadow-2xl relative z-10">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h1 className="text-xl font-bold mb-2">Quyền truy cập bị từ chối</h1>
-          <p className="text-slate-400 text-sm mb-6">Chức năng này chỉ dành cho tài khoản Quản trị viên (Admin).</p>
-          <Link href="/" className="inline-block w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold transition-all">
-            Về trang chủ
-          </Link>
+      <div className="min-h-screen bg-[#080b14] flex items-center justify-center">
+        <div className="relative w-12 h-12">
+          <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-violet-500 animate-spin" />
         </div>
       </div>
     );
@@ -376,21 +482,24 @@ export default function AdminPage() {
         </div>
       </header>
 
+      {/* ── Global Confirm Dialog ── */}
+      {dialog && (
+        <AdminConfirmDialog
+          isOpen={true}
+          variant={dialog.variant}
+          title={dialog.title}
+          message={dialog.message}
+          confirmLabel={dialog.confirmLabel}
+          cancelLabel={dialog.cancelLabel}
+          onConfirm={dialog.onConfirm}
+          onCancel={closeDialog}
+        />
+      )}
+
+      {/* ── Toast Notifications ── */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       <div className="w-full max-w-4xl mx-auto px-4 py-6">
-        {/* Toast */}
-        {toast && (
-          <div className={`mb-5 px-4 py-3 rounded-xl border text-sm font-medium flex items-center gap-3 transition-all animate-pulse ${
-            toast.type === "success"
-              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-              : "bg-red-500/10 border-red-500/30 text-red-400"
-          }`}>
-            {toast.type === "success"
-              ? <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-              : <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
-            }
-            {toast.msg}
-          </div>
-        )}
 
         {/* Tab switcher - Admin dashboard horizontal menu */}
         <div className="flex flex-wrap bg-white/5 rounded-xl p-1 mb-6 gap-1 sm:gap-0">
@@ -417,9 +526,26 @@ export default function AdminPage() {
 
         {/* ── CREATE EXAM TAB ─────────────────────────────────────────────── */}
         {tab === "create-exam" && (
-          <form onSubmit={handleCreateExam} className="space-y-4 max-w-2xl mx-auto">
+          <form onSubmit={handleSaveExam} className="space-y-4 max-w-2xl mx-auto">
             <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-6 shadow-xl space-y-4">
-              <h2 className="text-base font-bold">Tạo đề thi mới</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold">
+                  {editingExam ? `Chỉnh sửa đề thi: ${editingExam.name}` : "Tạo đề thi mới"}
+                </h2>
+                {editingExam && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingExam(null);
+                      setExamName("");
+                      setExamDesc("");
+                    }}
+                    className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 border border-white/10 transition-all"
+                  >
+                    Hủy sửa
+                  </button>
+                )}
+              </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-300 mb-1.5">
                   📋 Tên đề thi <span className="text-red-400">*</span>
@@ -453,15 +579,37 @@ export default function AdminPage() {
                 <h3 className="text-sm font-semibold text-slate-300 mb-3">📚 Đề thi hiện có ({exams.length})</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {exams.map((ex) => (
-                    <div key={ex.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                        </svg>
+                    <div key={ex.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center flex-shrink-0">
+                          <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white truncate">{ex.name}</p>
+                          {ex.description && <p className="text-xs text-slate-400 truncate">{ex.description}</p>}
+                        </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white truncate">{ex.name}</p>
-                        {ex.description && <p className="text-xs text-slate-400 truncate">{ex.description}</p>}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingExam(ex);
+                            setExamName(ex.name);
+                            setExamDesc(ex.description || "");
+                          }}
+                          className="p-1.5 text-xs font-bold text-violet-300 hover:text-white bg-violet-600/10 hover:bg-violet-600/30 border border-violet-500/20 rounded-lg transition-all"
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExam(ex.id, ex.name)}
+                          className="p-1.5 text-xs font-bold text-red-400 hover:text-white bg-red-600/10 hover:bg-red-600/30 border border-red-500/20 rounded-lg transition-all"
+                        >
+                          Xóa
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -492,6 +640,25 @@ export default function AdminPage() {
         {/* ── ADD QUESTION TAB ────────────────────────────────────────────── */}
         {tab === "add-question" && (
           <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl mx-auto">
+            <div className="flex items-center justify-between bg-white/[0.04] border border-white/10 rounded-2xl p-4">
+              <h2 className="text-base font-bold">
+                {editingQuestion ? `Chỉnh sửa câu hỏi ID: #${editingQuestion.id}` : "Thêm câu hỏi mới"}
+              </h2>
+              {editingQuestion && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingQuestion(null);
+                    setForm(EMPTY_FORM);
+                    removeImage();
+                    setTab("manage-questions");
+                  }}
+                  className="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded bg-white/5 border border-white/10 transition-all font-semibold"
+                >
+                  Hủy chỉnh sửa
+                </button>
+              )}
+            </div>
             {/* Select exam */}
             <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-5 shadow-xl">
               <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -628,10 +795,10 @@ export default function AdminPage() {
               {isSubmitting ? (
                 <><svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>Đang lưu…</>
               ) : (
-                <><svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Thêm câu hỏi</>
+                <><svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>{editingQuestion ? "Cập nhật câu hỏi" : "Thêm câu hỏi"}</>
               )}
             </button>
-            <p className="text-center text-xs text-slate-600 pb-4">Sau khi thêm sẽ tự về trang chủ.</p>
+            {!editingQuestion && <p className="text-center text-xs text-slate-600 pb-4">Sau khi thêm sẽ tự về trang chủ.</p>}
           </form>
         )}
 
@@ -694,7 +861,29 @@ export default function AdminPage() {
                           </p>
                         )}
                       </div>
-                      <div className="self-end md:self-start">
+                      <div className="flex items-center gap-2 self-end md:self-start flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingQuestion(q);
+                            setForm({
+                              question: q.question,
+                              option_a: q.option_a,
+                              option_b: q.option_b,
+                              option_c: q.option_c,
+                              option_d: q.option_d,
+                              answer: q.answer,
+                              explanation: q.explanation || "",
+                            });
+                            setSelectedExamId(String(q.exam_id));
+                            setImagePreview(q.image_url || null);
+                            setImageFile(null);
+                            setTab("add-question");
+                          }}
+                          className="px-3 py-1.5 text-xs font-bold bg-violet-600/15 border border-violet-500/30 text-violet-300 hover:bg-violet-600 hover:text-white rounded-lg transition-all"
+                        >
+                          Sửa câu
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDeleteQuestion(q.id)}
@@ -804,7 +993,7 @@ export default function AdminPage() {
                             {!isCurrentUser && (
                               <button
                                 type="button"
-                                onClick={() => handleDeleteUser(p.id)}
+                          onClick={() => handleDeleteUser(p.id, p.name)}
                                 className="px-2 py-1 bg-red-600/15 border border-red-500/30 text-red-400 hover:bg-red-600 hover:text-white rounded text-xs font-bold transition-all"
                               >
                                 Xóa

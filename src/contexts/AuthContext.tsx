@@ -130,16 +130,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { success: false, error: "Email này đã được đăng ký." };
         }
 
-        // Check if this is the first user
+        // Check if this is the first user (only first user becomes admin)
         const { count } = await supabase
           .from("user_profiles")
           .select("*", { count: "exact", head: true });
 
         const isFirstUser = count === 0;
-        const isAlwaysAdmin = cleanEmail.includes("admin");
 
-        const role = (isFirstUser || isAlwaysAdmin) ? "admin" : "student";
-        const approved = (isFirstUser || isAlwaysAdmin);
+        const role = isFirstUser ? "admin" : "student";
+        const approved = isFirstUser;
 
         const { data, error } = await supabase
           .from("user_profiles")
