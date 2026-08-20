@@ -189,6 +189,14 @@ export default function HomePage({ onStartExam }: HomePageProps) {
                       </svg>
                       {exam.questionCount ?? 0} câu hỏi
                     </span>
+                    {exam.time_limit_min && (
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {exam.time_limit_min} phút
+                      </span>
+                    )}
                   </div>
 
                   {/* Start button */}

@@ -91,18 +91,20 @@ export default function ResultPage({ questions, answers, timeUsedSec, onRetry, o
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400 hidden sm:inline truncate max-w-[120px]">{user?.name}</span>
-            <Link
-              href="/admin"
-              title="Thêm câu hỏi"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                bg-violet-600/20 text-violet-300 border border-violet-500/30
-                hover:bg-violet-600/40 hover:text-white transition-all"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Thêm câu
-            </Link>
+            {user?.role === "admin" && (
+              <Link
+                href="/admin"
+                title="Thêm câu hỏi"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
+                  bg-violet-600/20 text-violet-300 border border-violet-500/30
+                  hover:bg-violet-600/40 hover:text-white transition-all"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Thêm câu
+              </Link>
+            )}
             <button
               onClick={() => {
                 setDialog({

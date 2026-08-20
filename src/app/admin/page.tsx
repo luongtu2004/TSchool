@@ -342,10 +342,10 @@ export default function AdminPage() {
         });
 
         if (error) throw error;
-        showToast("success", "Thêm câu hỏi thành công", "Đang quay về trang chủ…");
+        showToast("success", "Thêm câu hỏi thành công", "Câu hỏi đã được lưu.");
         setForm(EMPTY_FORM);
         removeImage();
-        setTimeout(() => router.push("/"), 1800);
+        setTab("manage-questions");
       }
     } catch (err: unknown) {
       showToast("error", "Lỗi", err instanceof Error ? err.message : "Đã xảy ra lỗi.");

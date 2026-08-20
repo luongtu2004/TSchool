@@ -13,8 +13,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { Question, OptionKey, fetchQuestions } from "@/lib/quizData";
 import { useAuth } from "@/contexts/AuthContext";
 import ConfirmModal from "./ConfirmModal";
@@ -339,6 +337,19 @@ export default function QuizPage({ onSubmit, examId, examName, timeLimitMin, onB
           </div>
         </div>
       </header>
+
+      {/* ── MOBILE PROGRESS BAR ──────────────────────────────────────────────────── */}
+      <div className="lg:hidden sticky top-[57px] z-20 bg-[#080b14]/95 backdrop-blur-sm border-b border-white/[0.06]">
+        <div className="relative h-1 bg-white/10">
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500 rounded-full"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <p className="text-center text-[11px] text-slate-400 py-1 leading-none">
+          {answeredCount}/{questions.length} câu đã trả lời
+        </p>
+      </div>
 
       {/* ── MOBILE NAV OVERLAY ────────────────────────────────────────────────── */}
       {isNavOpen && (
